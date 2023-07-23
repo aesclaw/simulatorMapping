@@ -17,46 +17,9 @@ std::unique_ptr<ORB_SLAM2::System> SLAM; // an instance which helps us use the i
 std::string simulatorOutputDir;  // stores the path of the output directory
 
 
-// this function saves the information about a frame
-void saveFrame(cv::Mat &img, cv::Mat pose, int currentFrameId, int number_of_points) {
-    if (img.empty())  
-    {
-        std::cout << "Image is empty!!!" << std::endl;  // there is no information to save on empty frame
-        return;
-    }
-    std::ofstream frameData;
-    frameData.open(simulatorOutputDir + "frameData" +
-                   std::to_string(currentFrameId) + ".csv");  // we open a new file to store the information
-
-    std::ofstream framePointsCount;
-    framePointsCount.open(simulatorOutputDir + "framePointsCount" +
-                   std::to_string(currentFrameId) + ".txt");
-    framePointsCount << number_of_points;   // saving the amount of key points in this frame
-    framePointsCount.close();
-
-    // Extract position from pose matrix
-    double x = pose.at<float>(0,3);
-    double y = pose.at<float>(1,3);
-    double z = pose.at<float>(2,3);
-
-    cv::Point3d camera_position(x, y, z); // we save the location of the camera
-
-    // Extract orientation from pose matrix
-    double yaw, pitch, roll;
-    yaw = atan2(pose.at<float>(1,0), pose.at<float>(0,0)); // spin on x axis
-    pitch = atan2(-pose.at<float>(2,0), sqrt(pose.at<float>(2,1)*pose.at<float>(2,1) + pose.at<float>(2,2)*pose.at<float>(2,2))); // spin on y axis
-    roll = atan2(pose.at<float>(2,1), pose.at<float>(2,2)); // spin on z axis
-
-    frameData << currentFrameId << ',' << camera_position.x << ',' << camera_position.y << ',' << camera_position.z << ','
-              << yaw << ',' << pitch << ',' << roll << std::endl; // we store the camera details
-    cv::imwrite(simulatorOutputDir + "frame_" + std::to_string(currentFrameId) + ".png", img);  // we store the frame
-    frameData.close();
-}
-
 // this function saves the descriptors, keyPoints and the Map Points
 void saveMap(int mapNumber) {
     std::ofstream pointData;
-    std::unordered_set<int> seen_frames; // we dont use this
     int i = 0;
 
     pointData.open(simulatorOutputDir + "cloud" + std::to_string(mapNumber) + ".csv");
@@ -137,8 +100,6 @@ int main() {
     nlohmann::json data;
     programData >> data;
     programData.close();
-    char currentDirPath[256];
-    getcwd(currentDirPath, 256);
 
     //extract the information for the SLAM instance
     char time_buf[21];
@@ -161,7 +122,7 @@ int main() {
 
 
     // entering the main loop of the program, we will exit whem we finish to go over the video/all frames        
-    int amountOfAttepmpts = 0;
+    int amountOfAttepmpts = 0; // we can remove and pass 1 instead , also we can get rid of the while
     while (amountOfAttepmpts++ < 1) {
         cv::VideoCapture capture(videoPath); // open the video
         if (!capture.isOpened()) {
