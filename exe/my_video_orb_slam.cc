@@ -1,3 +1,6 @@
+#define CAMERA_INDEX 0
+
+
 #include <memory>
 #include <string>
 #include <thread>
@@ -87,7 +90,6 @@ void stopProgramHandler(int s) {
     exit(1);
 }
 
-
 int main() 
 {
     // set signal handlers
@@ -122,42 +124,33 @@ int main()
                                                loadMapPath,
                                                true); // creating the SLAM instance
 
-    // entering the main loop of the program, we will exit whem we finish to go over the video/all frames        
+    cv::Mat frame;
+    int cameraIndex = CAMERA_INDEX;
+
     int amountOfAttepmpts = 0; // we can remove and pass 1 instead , also we can get rid of the while
-    while (amountOfAttepmpts++ < 1) {
-        cv::VideoCapture capture(videoPath); // open the video
-        if (!capture.isOpened()) {
-            std::cout << "Error opening video stream or file" << std::endl;
-            return 0;
-        } else {
-            std::cout << "Success opening video stream or file" << std::endl;
-        }
 
-        cv::Mat frame;
-        std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now(); // saves when we started to play the video
-        for (int i = 0; i < 170; ++i) { // skips the 170 first frames
-            capture >> frame;
-        }
-        int amount_of_frames = 1; // useless - we don't count them anyways
-
-        // we go over all the frames
-        for (;;) {
-            SLAM->TrackMonocular(frame, capture.get(CV_CAP_PROP_POS_MSEC)); // finds Map Points, their keyPoints and descriptors from an image and her time stamp and save it inside SLAM
-
-            capture >> frame; // move to the next frame
-
-            if (frame.empty()) {  // when the frame is empty we don't need to check it
-                break;
-            }
-        }
-        saveMap(amountOfAttepmpts); // we save our keyPoints, descriptors and Map Points
-        std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now(); // saves when we ended to play the video
-
-        std::cout << "Time difference = " << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count()
-                  << std::endl;  // length of the video
-        std::cout << amount_of_frames << std::endl;
-        capture.release();
+    cv::VideoCapture capture(cameraIndex);
+    if (!capture.isOpened()) {
+        std::cout << "Error opening video stream or file" << std::endl;
+        return 0;
     }
+
+    
+
+    // entering the main loop of the program, we will exit whem we finish to go over the video/all frames   
+    for(;;)
+    {
+        capture.read(frame);
+        if(frame.empty()){
+            std::cout << "Empty" << std::endl;
+            break;
+        }
+        SLAM->TrackMonocular(frame, capture.get(CV_CAP_PROP_POS_MSEC));
+
+    }
+    saveMap(amountOfAttepmpts); // we save our keyPoints, descriptors and Map Points
+    capture.release();
+    return 1;
     // we can save our map using slam
     if (isSavingMap) {
         SLAM->SaveMap(simulatorOutputDir + "simulatorMap.bin");
@@ -169,3 +162,4 @@ int main()
 
     return 0;
 }
+
