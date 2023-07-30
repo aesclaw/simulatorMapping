@@ -162,6 +162,10 @@ int main() {
 
     // entering the main loop of the program, we will exit whem we finish to go over the video/all frames        
     int amountOfAttepmpts = 0;
+    int counter = 0;
+    int iterations = 0;
+    std::chrono::steady_clock::time_point s1;
+    std::chrono::steady_clock::time_point s2;
     while (amountOfAttepmpts++ < 1) {
         cv::VideoCapture capture(videoPath); // open the video
         if (!capture.isOpened()) {
@@ -177,11 +181,16 @@ int main() {
             capture >> frame;
         }
         int amount_of_frames = 1; // useless - we don't count them anyways
-
+        
         // we go over all the frames
-        for (;;) {
+        for (int i = 0; i < 1000; i++) {
+            iterations++;
+            s1 = std::chrono::steady_clock::now();
             SLAM->TrackMonocular(frame, capture.get(CV_CAP_PROP_POS_MSEC)); // finds Map Points, their keyPoints and descriptors from an image and her time stamp and save it inside SLAM
-
+            s2 = std::chrono::steady_clock::now();
+            /*std::cout << "Time difference = " << std::chrono::duration_cast<std::chrono::milliseconds>(s2 - s1).count()
+                  << std::endl;*/  // length of the video
+            counter += std::chrono::duration_cast<std::chrono::milliseconds>(s2 - s1).count();
             capture >> frame; // move to the next frame
 
             if (frame.empty()) {  // when the frame is empty we don't need to check it
@@ -206,6 +215,9 @@ int main() {
     SLAM->Shutdown();
     cvDestroyAllWindows();
 
+    std::cout << "Total Track time: " << iterations << std::endl;
+    std::cout << "Frames sent to track: " << counter << std::endl;
+    std::cout << "Average track time for frame: " << 1.0 * counter / iterations << std::endl;
     return 0;
 }
 

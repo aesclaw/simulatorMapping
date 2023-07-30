@@ -217,6 +217,3 @@ target_link_libraries(demo ${PROJECT_NAME})
 
 add_executable(navigate_to_point exe/navigate_to_point.cc)
 target_link_libraries(navigate_to_point ${PROJECT_NAME})
-
-add_executable(speedup_offline_orb_slam exe/speedup_offline_orb_slam.cpp)
-target_link_libraries(speedup_offline_orb_slam ${PROJECT_NAME})
