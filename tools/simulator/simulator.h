@@ -177,6 +177,10 @@ private:
                  double fps,
                  int totalCommandTimeInSeconds);
 
+    void faster();
+
+    void slower();
+
     void static applyForwardToModelCam(pangolin::OpenGlRenderState &cam, double value);
 
     void static applyRightToModelCam(pangolin::OpenGlRenderState &cam, double value);

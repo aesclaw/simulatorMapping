@@ -87,6 +87,8 @@ void Simulator::simulatorRunThread() {
     pangolin::RegisterKeyPressCallback('x', [&]() { show_x0 = !show_x0; });
     pangolin::RegisterKeyPressCallback('y', [&]() { show_y0 = !show_y0; });
     pangolin::RegisterKeyPressCallback('z', [&]() { show_z0 = !show_z0; });
+    pangolin::RegisterKeyPressCallback('1', [&]() { faster(); });
+    pangolin::RegisterKeyPressCallback('2', [&]() { slower(); });
     pangolin::RegisterKeyPressCallback('w', [&]() { applyForwardToModelCam(s_cam, movementFactor); });
     pangolin::RegisterKeyPressCallback('a', [&]() { applyRightToModelCam(s_cam, movementFactor); });
     pangolin::RegisterKeyPressCallback('s', [&]() { applyForwardToModelCam(s_cam, -movementFactor); });
@@ -336,6 +338,23 @@ void Simulator::applyCommand(std::string &command, double value, int intervalUsl
         intervalOverCommand(Simulator::applyUpModelCam, value, intervalUsleep, fps,
                             totalCommandTimeInSeconds);
     }
+}
+
+
+void Simulator::faster()
+{
+    if(this->movementFactor >= 1){
+        return;
+    }
+    this->movementFactor += 0.1;
+}
+
+void Simulator::slower()
+{
+    if(this->movementFactor <= 0.1){
+        return;
+    }
+    this->movementFactor -= 0.1;
 }
 
 void Simulator::applyUpModelCam(pangolin::OpenGlRenderState &cam, double value) {
