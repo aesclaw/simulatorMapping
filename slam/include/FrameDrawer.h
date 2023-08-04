@@ -48,6 +48,8 @@ public:
     // Draw last processed frame.
     cv::Mat DrawFrame();
 
+    bool isReady();
+
 protected:
 
     void DrawTextInfo(cv::Mat &im, int nState, cv::Mat &imText);
@@ -64,6 +66,8 @@ protected:
     int mState;
 
     Map* mpMap;
+
+    bool ready_frame;
 
     std::mutex mMutex;
 };

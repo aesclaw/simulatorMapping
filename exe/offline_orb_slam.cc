@@ -183,7 +183,7 @@ int main() {
         int amount_of_frames = 1; // useless - we don't count them anyways
         
         // we go over all the frames
-        for (int i = 0; i < 1000; i++) {
+        for (;;) {
             iterations++;
             s1 = std::chrono::steady_clock::now();
             SLAM->TrackMonocular(frame, capture.get(CV_CAP_PROP_POS_MSEC)); // finds Map Points, their keyPoints and descriptors from an image and her time stamp and save it inside SLAM
@@ -192,7 +192,6 @@ int main() {
                   << std::endl;*/  // length of the video
             counter += std::chrono::duration_cast<std::chrono::milliseconds>(s2 - s1).count();
             capture >> frame; // move to the next frame
-
             if (frame.empty()) {  // when the frame is empty we don't need to check it
                 break;
             }

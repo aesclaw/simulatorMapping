@@ -28,7 +28,7 @@
 
 namespace ORB_SLAM2 {
 
-    FrameDrawer::FrameDrawer(Map *pMap, bool bReuse) : mpMap(pMap) {
+    FrameDrawer::FrameDrawer(Map *pMap, bool bReuse) : mpMap(pMap), ready_frame(false) {
         mState = Tracking::SYSTEM_NOT_READY;
         if (bReuse)
             mState = Tracking::LOST;
@@ -109,9 +109,15 @@ namespace ORB_SLAM2 {
         cv::Mat imWithInfo;
         DrawTextInfo(im, state, imWithInfo);
 
+        this->ready_frame = false;
+        
         return imWithInfo;
     }
 
+    bool FrameDrawer::isReady()
+    {
+        return this->ready_frame;
+    }
 
     void FrameDrawer::DrawTextInfo(cv::Mat &im, int nState, cv::Mat &imText) {
         stringstream s;
@@ -173,6 +179,7 @@ namespace ORB_SLAM2 {
             }
         }
         mState = static_cast<int>(pTracker->mLastProcessedState);
+        this->ready_frame = true;
     }
 
 } //namespace ORB_SLAM
