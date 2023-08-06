@@ -20,7 +20,8 @@ Simulator::Simulator(std::string ORBSLAMConfigFile, std::string model_path, std:
                                             movementFactor(movementFactor), modelPath(model_path), modelTextureNameToAlignTo(modelTextureNameToAlignTo),
                                             isSaveMap(saveMap),
                                             trackImages(trackImages), cull_backfaces(false),
-                                            viewportDesiredSize(640, 480) {
+                                            viewportDesiredSize(640, 480),
+                                            speed_factor(1.0) {
     cv::FileStorage fSettings(ORBSLAMConfigFile, cv::FileStorage::READ);
 
     float fx = fSettings["Camera.fx"];
@@ -89,16 +90,16 @@ void Simulator::simulatorRunThread() {
     pangolin::RegisterKeyPressCallback('z', [&]() { show_z0 = !show_z0; });
     pangolin::RegisterKeyPressCallback('1', [&]() { faster(); });
     pangolin::RegisterKeyPressCallback('2', [&]() { slower(); });
-    pangolin::RegisterKeyPressCallback('w', [&]() { applyForwardToModelCam(s_cam, movementFactor); });
-    pangolin::RegisterKeyPressCallback('a', [&]() { applyRightToModelCam(s_cam, movementFactor); });
-    pangolin::RegisterKeyPressCallback('s', [&]() { applyForwardToModelCam(s_cam, -movementFactor); });
-    pangolin::RegisterKeyPressCallback('d', [&]() { applyRightToModelCam(s_cam, -movementFactor); });
-    pangolin::RegisterKeyPressCallback('e', [&]() { applyYawRotationToModelCam(s_cam, 1); });
-    pangolin::RegisterKeyPressCallback('q', [&]() { applyYawRotationToModelCam(s_cam, -1); });
+    pangolin::RegisterKeyPressCallback('w', [&]() { applyForwardToModelCam(s_cam, movementFactor * this->speed_factor); });
+    pangolin::RegisterKeyPressCallback('a', [&]() { applyRightToModelCam(s_cam, movementFactor * this->speed_factor); });
+    pangolin::RegisterKeyPressCallback('s', [&]() { applyForwardToModelCam(s_cam, -movementFactor * this->speed_factor); });
+    pangolin::RegisterKeyPressCallback('d', [&]() { applyRightToModelCam(s_cam, -movementFactor * this->speed_factor); });
+    pangolin::RegisterKeyPressCallback('e', [&]() { applyYawRotationToModelCam(s_cam, 1 * this->speed_factor); });
+    pangolin::RegisterKeyPressCallback('q', [&]() { applyYawRotationToModelCam(s_cam, -1 * this->speed_factor); });
     pangolin::RegisterKeyPressCallback('r', [&]() {
-        applyUpModelCam(s_cam, -movementFactor);
+        applyUpModelCam(s_cam, -movementFactor * this->speed_factor);
     });// ORBSLAM y axis is reversed
-    pangolin::RegisterKeyPressCallback('f', [&]() { applyUpModelCam(s_cam, movementFactor); });
+    pangolin::RegisterKeyPressCallback('f', [&]() { applyUpModelCam(s_cam, movementFactor * this->speed_factor); });
     const pangolin::Geometry modelGeometry = pangolin::LoadGeometry(modelPath);
     alignModelViewPointToSurface(modelGeometry, modelTextureNameToAlignTo);
     geomToRender = pangolin::ToGlGeometry(modelGeometry);
@@ -301,7 +302,7 @@ void Simulator::applyPitchRotationToModelCam(pangolin::OpenGlRenderState &cam, d
 void Simulator::intervalOverCommand(
         const std::function<void(pangolin::OpenGlRenderState &, double &)> &func, double value,
         int intervalUsleep, double fps, int totalCommandTimeInSeconds) {
-    double intervalValue = value / (fps * totalCommandTimeInSeconds);
+    double intervalValue = this->speed_factor * value / (fps * totalCommandTimeInSeconds);
     int intervalIndex = 0;
     while (intervalIndex <= fps * totalCommandTimeInSeconds) {
         usleep(intervalUsleep);
@@ -343,7 +344,7 @@ void Simulator::applyCommand(std::string &command, double value, int intervalUsl
 
 void Simulator::faster()
 {
-    if(this->movementFactor >= 1){
+    if(this->speed_factor >= 2.0){ 
         return;
     }
     this->movementFactor += 0.1;
@@ -351,7 +352,7 @@ void Simulator::faster()
 
 void Simulator::slower()
 {
-    if(this->movementFactor <= 0.1){
+    if(this->speed_factor <= 1){
         return;
     }
     this->movementFactor -= 0.1;

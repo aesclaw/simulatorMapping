@@ -257,9 +257,9 @@ std::vector<OfflineMapPoint*> Simulator::getPointsFromTcw() {
         }
     }
 
-    cv::Mat Rcw = Tcw_cv.rowRange(0, 3).colRange(0, 3);
+    cv::Mat Rcw = Tcw_cv.rowRange(0, 3).colRange(0, 3);  // rotation matrix
     cv::Mat Rwc = Rcw.t();
-    cv::Mat tcw = Tcw_cv.rowRange(0, 3).col(3);
+    cv::Mat tcw = Tcw_cv.rowRange(0, 3).col(3);  // translation matrix
     cv::Mat mOw = -Rcw.t() * tcw;
 
     // Save Twc for s_cam

@@ -115,6 +115,10 @@ public:
  */
     void setTrack(bool value) { track = value; }
 
+    void setSpeed(double value);
+
+    double getSpeed() const;
+
 private:
     /**
  * @brief A map for controlling the virtual robot's actions.
@@ -156,6 +160,8 @@ private:
     Eigen::Vector2i viewportDesiredSize;
     cv::Mat Tcw;
     std::mutex locationLock;
+
+    double speed_factor;
 
     void simulatorRunThread();
 

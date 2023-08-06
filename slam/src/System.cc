@@ -138,7 +138,7 @@ namespace ORB_SLAM2 {
         //Initialize the Tracking thread
         //(it will live in the main thread of execution, the one that called this constructor)
         mpTracker = new Tracking(this, mpVocabulary, mpFrameDrawer, mpMapDrawer,
-                                 mpMap, mpKeyFrameDatabase, strSettingsFile, mSensor, bReuse, viewer_lock);
+                                 mpMap, mpKeyFrameDatabase, strSettingsFile, mSensor, bReuse);
 
         // BAR
         if (continue_mapping)
@@ -153,7 +153,7 @@ namespace ORB_SLAM2 {
         mptLoopClosing = new thread(&ORB_SLAM2::LoopClosing::Run, mpLoopCloser);
 
         //Initialize the Viewer thread and launch
-        mpViewer = new Viewer(this, mpFrameDrawer, mpMapDrawer, mpTracker, strSettingsFile, bReuse, isPangolinExists, viewer_lock);
+        mpViewer = new Viewer(this, mpFrameDrawer, mpMapDrawer, mpTracker, strSettingsFile, bReuse, isPangolinExists);
         if (bUseViewer)
             mptViewer = new thread(&Viewer::Run, mpViewer);
 
