@@ -341,6 +341,15 @@ void Simulator::applyCommand(std::string &command, double value, int intervalUsl
     }
 }
 
+void Simulator::setSpeed(double speed)
+{
+    this->speed_factor = speed;
+}
+
+double Simulator::getSpeed() const
+{
+    return this->speed_factor;
+}
 
 void Simulator::faster()
 {

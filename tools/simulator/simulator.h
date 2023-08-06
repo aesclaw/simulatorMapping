@@ -115,7 +115,7 @@ public:
  */
     void setTrack(bool value) { track = value; }
 
-    void setSpeed(double value);
+    void setSpeed(double speed);
 
     double getSpeed() const;
 
