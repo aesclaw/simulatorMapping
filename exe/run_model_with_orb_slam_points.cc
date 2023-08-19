@@ -220,18 +220,25 @@ int main(int argc, char **argv) {
     {
         transformation_matrix_csv_path = std::string(data["framesOutput"]) + "frames_transformation_matrix.csv";
     }
-    Eigen::Matrix4f transformation;
-    //Eigen::Matrix4f transformation = loadMatrixFromFile(transformation_matrix_csv_path);
-    for(int i = 0; i < 4; i++)
-    {
-        for(int j = 0; j < 4; j++)
-        {
-            if(i == j)
-                transformation(i, j) = 1;
-            else
-                transformation(i, j) = 0;
-        }
-    }
+    Eigen::Matrix4f transformation = loadMatrixFromFile(transformation_matrix_csv_path);
+
+    transformation(0, 0) = 6.28;
+    transformation(0, 1) = -0.303684;
+    transformation(0, 2) = -1.4316096;
+    transformation(0, 3) = -0.3;
+    transformation(1, 0) = -0.441152;
+    transformation(1, 1) = -6.28;
+    transformation(1, 2) = -0.998604;
+    transformation(1, 3) = 2.0;
+    transformation(2, 0) = -1.2091744;
+    transformation(2, 1) = 1.080456;
+    transformation(2, 2) = -6.28;
+    transformation(2, 3) = 2.0;
+    transformation(3, 0) = 0.0;
+    transformation(3, 1) = 0.0;
+    transformation(3, 2) = 0.0;
+    transformation(3, 3) = 0.0;
+    
     std::cout << transformation << std::endl;
 
     std::vector<cv::Point3d> points_to_draw;
