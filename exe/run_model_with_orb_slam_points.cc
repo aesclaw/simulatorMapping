@@ -23,6 +23,23 @@
 #define NEAR_PLANE 0.1
 #define FAR_PLANE 20
 
+cv::Point3d transformPoint(const cv::Point3d &point, const Eigen::Matrix4f &transformation) {
+    Eigen::Vector4f eigenPoint = Eigen::Vector4f((float)point.x, (float)point.y, (float)point.z, 1.0f);
+    Eigen::Vector4f transformedPoint = transformation * eigenPoint;
+    return cv::Point3d((double)transformedPoint(0), (double)transformedPoint(1), (double)transformedPoint(2));
+}
+
+std::vector<cv::Point3d> findPos(pangolin::OpenGlRenderState &s_cam, const Eigen::Matrix4f &transformation)
+{
+    const auto T_world_camera = s_cam.GetModelViewMatrix().Inverse();
+    const double x = T_world_camera(0,3);
+    const double y = T_world_camera(1,3);
+    const double z = T_world_camera(2,3);
+    std::vector<cv::Point3d> point;
+    point.push_back(transformPoint(cv::Point3d((double)x, (double)y, (double)z), transformation));
+    return point;
+}
+
 void drawPoints(std::vector<cv::Point3d> seen_points, std::vector<cv::Point3d> new_points_seen) {
     std::string settingPath = Auxiliary::GetGeneralSettingsPath();
     std::ifstream programData(settingPath);
@@ -76,12 +93,6 @@ Eigen::Matrix4f loadMatrixFromFile(const std::string &filename) {
     }
 
     return matrix;
-}
-
-cv::Point3d transformPoint(const cv::Point3d &point, const Eigen::Matrix4f &transformation) {
-    Eigen::Vector4f eigenPoint = Eigen::Vector4f((float)point.x, (float)point.y, (float)point.z, 1.0f);
-    Eigen::Vector4f transformedPoint = transformation * eigenPoint;
-    return cv::Point3d((double)transformedPoint(0), (double)transformedPoint(1), (double)transformedPoint(2));
 }
 
 std::vector<cv::Point3d> loadPoints() {
@@ -221,7 +232,12 @@ int main(int argc, char **argv) {
         transformation_matrix_csv_path = std::string(data["framesOutput"]) + "frames_transformation_matrix.csv";
     }
     Eigen::Matrix4f transformation = loadMatrixFromFile(transformation_matrix_csv_path);
-
+    /*for(int i = 0; i < 4; i++)
+    {
+        transformation(i, i) = 1;
+    }
+    */
+    /*
     transformation(0, 0) = 6.28;
     transformation(0, 1) = -0.303684;
     transformation(0, 2) = -1.4316096;
@@ -237,8 +253,25 @@ int main(int argc, char **argv) {
     transformation(3, 0) = 0.0;
     transformation(3, 1) = 0.0;
     transformation(3, 2) = 0.0;
-    transformation(3, 3) = 0.0;
-    
+    transformation(3, 3) = 1.0;
+    */
+    transformation(0, 0) = 1.0;
+    transformation(0, 1) = -0.0483;
+    transformation(0, 2) = -0.22792;
+    transformation(0, 3) = -0.3;
+    transformation(1, 0) = -0.0704;
+    transformation(1, 1) = -1;
+    transformation(1, 2) = -0.15864633;
+    transformation(1, 3) = 2.0;
+    transformation(2, 0) = -0.1928;
+    transformation(2, 1) = 0.1722;
+    transformation(2, 2) = -1;
+    transformation(2, 3) = 2.0;
+    transformation(3, 0) = 0.0;
+    transformation(3, 1) = 0.0;
+    transformation(3, 2) = 0.0;
+    transformation(3, 3) = 1.0;
+
     std::cout << transformation << std::endl;
 
     std::vector<cv::Point3d> points_to_draw;
@@ -278,7 +311,7 @@ int main(int argc, char **argv) {
 
             glDisable(GL_CULL_FACE);
 
-            drawPoints(std::vector<cv::Point3d>(), points_to_draw);
+            drawPoints(findPos(s_cam, transformation), points_to_draw);
         }
 
         pangolin::FinishFrame();

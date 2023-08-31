@@ -18,6 +18,7 @@
 #include "ORBextractor.h"
 #include "System.h"
 
+#include <Eigen/Core>
 #include <Eigen/SVD>
 #include <Eigen/Geometry>
 
@@ -29,6 +30,46 @@
 #define NEAR_PLANE 0.1
 #define FAR_PLANE 20
 
+const double EPSILON = DBL_EPSILON;
+bool stopScan = false;
+
+void changeScanMode()
+{
+    stopScan = !stopScan;
+}
+
+bool compareDouble(double a, double b)
+{
+    return abs(a - b) <= EPSILON;
+}
+
+bool compare(const cv::Point3d& pt1, const cv::Point3d& pt2)
+{
+    return (compareDouble(pt1.x, pt2.x) && compareDouble(pt1.y, pt2.y) && compareDouble(pt1.z, pt2.z));
+}
+
+int countUniquePoints(const std::vector<cv::Point3d>& points)
+{
+    std::vector<cv::Point3d> unique;
+    bool is_unique;
+    for(auto new_point: points)
+    {   
+        is_unique = true;
+        for(auto unique_point: unique)
+        {
+            if(compare(new_point, unique_point))
+            {
+                is_unique = false;
+                break;
+            }
+        }
+        if(is_unique)
+        {
+            unique.push_back(new_point);
+        }
+    }
+    return unique.size();
+}
 //draw an image of the keyPoints, the new keyPoints will appear in a different color
 void drawPoints(std::vector<cv::Point3d> new_points_seen) {
     //getting general settings
@@ -47,7 +88,9 @@ void drawPoints(std::vector<cv::Point3d> new_points_seen) {
     for (auto point: new_points_seen) {
         glVertex3f((float) (point.x), (float) (point.y), (float) (point.z)); // color the new keyPoints in a different color
     }
-    std::cout << new_points_seen.size() << std::endl;
+
+    //std::cout << new_points_seen.size() << std::endl;
+    std::cout << countUniquePoints(new_points_seen) << std::endl;
 
     glEnd();
 }
@@ -61,6 +104,46 @@ Eigen::Matrix4f Load_Matrix(const std::string& filename)
 
     Eigen::Matrix4f mat; 
 
+    Eigen::Matrix4f matrix;
+    std::ifstream infile(filename);
+
+    if (infile.is_open()) {
+        int row = 0;
+        std::string line;
+        while (std::getline(infile, line)) {
+            std::istringstream ss(line);
+            std::string value;
+            int col = 0;
+            while (std::getline(ss, value, ',')) {
+                matrix(row, col) = std::stof(value);
+                col++;
+            }
+            row++;
+        }
+        infile.close();
+    } else {
+        std::cerr << "Cannot open file: " << filename << std::endl;
+    }
+
+    return matrix;
+    /*
+    mat(0, 0) = 1.0;
+    mat(0, 1) = -0.0483;
+    mat(0, 2) = -0.22792;
+    mat(0, 3) = -0.3;
+    mat(1, 0) = -0.0704;
+    mat(1, 1) = -1;
+    mat(1, 2) = -0.15864633;
+    mat(1, 3) = 2.0;
+    mat(2, 0) = -0.1928;
+    mat(2, 1) = 0.1722;
+    mat(2, 2) = -1;
+    mat(2, 3) = 2.0;
+    mat(3, 0) = 0.0;
+    mat(3, 1) = 0.0;
+    mat(3, 2) = 0.0;
+    mat(3, 3) = 1.0;
+    
     mat(0, 0) = 6.28;
     mat(0, 1) = -0.303684;
     mat(0, 2) = -1.4316096;
@@ -77,39 +160,10 @@ Eigen::Matrix4f Load_Matrix(const std::string& filename)
     mat(3, 1) = 0.0;
     mat(3, 2) = 0.0;
     mat(3, 3) = 1.0;
-
-    return mat;
-    /*
-    file.open(filename);
-    
-    while (!file.eof()) {
-        row.clear();
-
-        std::getline(file, line);
-
-        std::stringstream words(line);
-
-        if (line == "") {
-            continue;
-        }
-
-        while (std::getline(words, word, ',')) {
-            try
-            {
-                std::stod(word);
-            }
-            catch(std::out_of_range)
-            {
-                word = "0";
-            }
-            row.push_back(word);
-        }
-        points.push_back(cv::Point3d(std::stod(row[0]), std::stod(row[1]), std::stod(row[2])));
-    }
-    pointData.close();
     
     return mat;
     */
+    
 }
 
 
@@ -119,10 +173,82 @@ cv::Point3d transformPoint(const cv::Point3d &point, const Eigen::Matrix4f &tran
     return cv::Point3d((double)transformedPoint(0), (double)transformedPoint(1), (double)transformedPoint(2));
 }
 
-cv::Vec3f transformRotation(const cv::Vec3f &point, const Eigen::Matrix3f &rotation) {
-    Eigen::Vector3f eigenPoint = Eigen::Vector3f((float)point[0], (float)point[1], (float)point[2]);
-    Eigen::Vector3f transformedPoint = rotation * eigenPoint;
-    return cv::Vec3f((double)transformedPoint(0), (double)transformedPoint(1), (double)transformedPoint(2));
+std::vector<cv::Point3d> transformVector(std::vector<cv::Point3d> points, const Eigen::Matrix4f &transformation) 
+{
+    std::vector<cv::Point3d> transformed_points;
+    for(auto point : points)
+    {
+        transformed_points.push_back(transformPoint(point, transformation));
+    }
+    return transformed_points;
+}
+
+cv::Vec3f extractEulerAngles(const Eigen::Matrix3f& rotations)
+{
+    Eigen::Vector3f euler_angles = rotations.eulerAngles(2, 1, 0); // yaw, pitch, roll
+        
+    // Extract transformed yaw, pitch, and roll
+    float yaw = euler_angles(0), pitch = euler_angles(1), roll = euler_angles(2);
+    
+    return cv::Vec3f((double)yaw, (double)pitch, (double)roll);
+}
+
+cv::Vec3f transformRotation(const cv::Vec3f &angels, const Eigen::Matrix4f &transformation_matrix) {
+
+    /*
+    // Extract rotation part of the transformed matrix
+        Eigen::Matrix3f rotation_matrix = mv_mat_eigen.block<3, 3>(0, 0);
+
+        // Convert the rotation matrix to Euler angles (yaw, pitch, roll)
+        Eigen::Vector3f euler_angels = rotation_matrix.eulerAngles(2, 1, 0); // yaw, pitch, roll
+    */
+    // Extract transformed yaw, pitch, and roll
+    float yaw = angels(0);
+    float pitch = angels(1);
+    float roll = angels(2);
+
+    // Construct the original rotation matrix from the yaw, pitch, and roll angles
+    Eigen::AngleAxisf yaw_rotation(yaw, Eigen::Vector3f::UnitZ());
+    Eigen::AngleAxisf pitch_rotation(pitch, Eigen::Vector3f::UnitY());
+    Eigen::AngleAxisf roll_rotation(roll, Eigen::Vector3f::UnitX());
+    Eigen::Matrix3f original_rotation_matrix = (yaw_rotation * pitch_rotation * roll_rotation).toRotationMatrix();
+
+    // Convert the original rotation matrix to Matrix4f for multiplication
+    Eigen::Matrix4f original_rotation_matrix_4f = Eigen::Matrix4f::Identity();
+    original_rotation_matrix_4f.block<3, 3>(0, 0) = original_rotation_matrix;
+
+    // Apply the transformation matrix to obtain the resulting rotation matrix
+    Eigen::Matrix4f transformed_rotation_matrix = transformation_matrix.inverse() * original_rotation_matrix_4f;
+
+    // Extract the yaw, pitch, and roll angles from the resulting rotation matrix
+    Eigen::Matrix3f transformed_rotation_matrix_3f = transformed_rotation_matrix.block<3, 3>(0, 0);
+    /*
+    Eigen::Vector3f transformed_euler_angles = transformed_rotation_matrix_3f.eulerAngles(2, 1, 0);
+    float transformed_yaw = transformed_euler_angles(0);
+    float transformed_pitch = transformed_euler_angles(1);
+    float transformed_roll = transformed_euler_angles(2);
+    */
+    return extractEulerAngles(transformed_rotation_matrix_3f);
+    /*
+    Eigen::Matrix3d temp_rotationMatrix = (Eigen::AngleAxisd(angels[0], Eigen::Vector3d::UnitZ()) * 
+                             Eigen::AngleAxisd(angels[1], Eigen::Vector3d::UnitY()) *
+                             Eigen::AngleAxisd(angels[2], Eigen::Vector3d::UnitX())).toRotationMatrix();
+
+    Eigen::Matrix3f rotationMatrix = temp_rotationMatrix.cast<float>();
+    // Given rotation matrix to new coordinate system
+    Eigen::Matrix3f rotationMatrixNew = rotation;
+
+    // Apply rotation matrix to obtain new rotation matrix
+    Eigen::Matrix3f newRotationMatrix = rotationMatrixNew * rotationMatrix;
+
+    return extractEulerAngles(newRotationMatrix);
+    */
+    /*
+    // Extract new Euler angles from new rotation matrix
+    Eigen::Vector3f newEulerAngles = newRotationMatrix.eulerAngles(2, 1, 0); // ZYX order
+
+    return cv::Vec3f((double)newEulerAngles(0), (double)newEulerAngles(1), (double)newEulerAngles(2));
+    */
 }
 
 
@@ -136,16 +262,6 @@ std::vector<cv::Point3d> getVisiblePoints(const cv::Point3d& point, const cv::Ve
     programData >> data;
     programData.close();
 
-    //extract the camera settings file
-    std::string configPath = data["DroneYamlPathSlam"];
-    cv::FileStorage fSettings(configPath, cv::FileStorage::READ);
-
-    //camera settings
-    float fx = fSettings["Camera.fx"];
-    float fy = fSettings["Camera.fy"];
-    float cx = fSettings["Camera.cx"];
-    float cy = fSettings["Camera.cy"];
-
     std::string transformation_matrix_csv_path = std::string(data["framesOutput"]) + "frames_lab_transformation_matrix.csv";
 
     Eigen::Matrix4f transformation_Matrix = Load_Matrix(transformation_matrix_csv_path);
@@ -153,19 +269,15 @@ std::vector<cv::Point3d> getVisiblePoints(const cv::Point3d& point, const cv::Ve
 
     cv::Point3d transformed_Point = transformPoint(point, transformation_Matrix.inverse());
 
-    cv::Vec3f transformed_Rotation = transformRotation(rotations, transformation_Matrix.block<3,3>(0,0).inverse());
+    cv::Vec3f transformed_Rotation = transformRotation(rotations, transformation_Matrix);
 
-    double yaw = rotations[0];
-    double pitch = rotations[1];
-    double roll = rotations[2];
+    double yaw = -transformed_Rotation[0];
+    double pitch = transformed_Rotation[1];
+    double roll = transformed_Rotation[2];
 
     std::vector<cv::Point3d> visible_Points_slam = Auxiliary::getPointsFromPos(csvfile, transformed_Point, yaw, pitch, roll, Twc);
     
-    std::vector<cv::Point3d> visible_Points_model;
-    for(auto slam_point : visible_Points_slam)
-    {
-        visible_Points_model.push_back(transformPoint(slam_point, transformation_Matrix));
-    }
+    std::vector<cv::Point3d> visible_Points_model = transformVector(visible_Points_slam, transformation_Matrix);
 
     return visible_Points_model;
 }
@@ -199,13 +311,17 @@ cv::Vec3f findRotation(std::shared_ptr<pangolin::OpenGlRenderState> &s_cam)
     pangolin::OpenGlMatrix mv_mat = s_cam->GetModelViewMatrix();
     Eigen::Matrix4f mv_mat_eigen = openGlMatrixToEigen(mv_mat);
     Eigen::Matrix3f rotation_matrix = mv_mat_eigen.block<3, 3>(0, 0);
-            
+
+    return extractEulerAngles(rotation_matrix);
+    /*
     // Convert the rotation matrix to Euler angles (yaw, pitch, roll)
     Eigen::Vector3f euler_angles = rotation_matrix.eulerAngles(2, 1, 0); // yaw, pitch, roll
         
     // Extract transformed yaw, pitch, and roll
     float yaw = euler_angles(0), pitch = euler_angles(1), roll = euler_angles(2);
+    
     return cv::Vec3f((double)yaw, (double)pitch, (double)roll);
+    */
 }
 
 
@@ -366,6 +482,8 @@ void runModelAndOrbSlam(std::string &settingPath, bool *stopFlag, std::shared_pt
     pangolin::RegisterKeyPressCallback('b', [&]() { show_bounds = !show_bounds; });
     pangolin::RegisterKeyPressCallback('0', [&]() { cull_backfaces = !cull_backfaces; });
 
+    //stop new points scan from pos
+    pangolin::RegisterKeyPressCallback('p', [&]() { changeScanMode(); });
     // Show axis and axis planes
     pangolin::RegisterKeyPressCallback('a', [&]() { show_axis = !show_axis; });
     pangolin::RegisterKeyPressCallback('k', [&]() { *stopFlag = !*stopFlag; });
@@ -442,7 +560,13 @@ void runModelAndOrbSlam(std::string &settingPath, bool *stopFlag, std::shared_pt
             cv::Point3d pos = findPos(s_cam);
             cv::Vec3f rotations = findRotation(s_cam);
 
-            drawVisiblePoints(pos, rotations, cloud_points, cv::Mat(4,4, CV_64FC1));
+            if(!stopScan)
+            {
+                seenPoints = getVisiblePoints(pos, rotations, cloud_points, cv::Mat(4,4, CV_64FC1));
+            }
+            drawPoints(seenPoints);
+            //drawVisiblePoints(pos, rotations, cloud_points, cv::Mat(4,4, CV_64FC1));
+
             s_cam->Apply();
 
             glDisable(GL_CULL_FACE);
